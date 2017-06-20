@@ -1,6 +1,12 @@
 require 'spec_helper'
 
 describe MultipleMan::Publisher do
+  before do
+    expect(MultipleMan::Outbox).to receive(
+      :setup_table!
+    ).and_return(true)
+  end
+
   class MockClass
     class << self
       attr_accessor :subscriber

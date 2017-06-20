@@ -4,7 +4,8 @@ module MultipleMan
   class Runner
     extend Forwardable
 
-    MODES = [:general, :seed].freeze
+    # TODO: 'general' should be 'consume' for message naming consistency
+    MODES = [:produce, :general, :seed].freeze
 
     def initialize(options = {})
       @mode = options.fetch(:mode, :general)
@@ -16,6 +17,11 @@ module MultipleMan
       preload_framework!
       channel.prefetch(prefetch_size)
       build_listener.listen
+    end
+
+    def run_producer
+      preload_framework!
+      Producers::General.new.run_producer
     end
 
     private

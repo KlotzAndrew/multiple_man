@@ -2,20 +2,19 @@ require 'active_support/core_ext'
 
 module MultipleMan
   class ModelPublisher
-
     def initialize(options = {})
+      DB.setup!
+
       self.options = options.with_indifferent_access
     end
 
-    def publish(records, operation=:create)
+    def publish(records, operation = :create)
       return unless MultipleMan.configuration.enabled
 
-      Connection.connect do |connection|
-        ActiveSupport::Notifications.instrument('multiple_man.publish_messages') do
-          all_records(records) do |record|
-            ActiveSupport::Notifications.instrument('multiple_man.publish_message') do
-              push_record(connection, record, operation)
-            end
+      ActiveSupport::Notifications.instrument('multiple_man.publish_messages') do
+        all_records(records) do |record|
+          ActiveSupport::Notifications.instrument('multiple_man.publish_message') do
+            create_message(record, operation)
           end
         end
       end
@@ -23,17 +22,15 @@ module MultipleMan
       MultipleMan.error(ex)
     end
 
-  private
+    private
 
     attr_accessor :options
 
-    def push_record(connection, record, operation)
-      data = PayloadGenerator.new(record, operation, options)
+    def create_message(record, operation)
+      data        = PayloadGenerator.new(record, operation, options)
       routing_key = RoutingKey.new(data.type, operation).to_s
 
-      MultipleMan.logger.debug("  Record Data: #{data} | Routing Key: #{routing_key}")
-
-      connection.topic.publish(data.payload, routing_key: routing_key)
+      MultipleManMessage.create(payload: data.payload, routing_key: routing_key)
     end
 
     def all_records(records, &block)
@@ -45,6 +42,5 @@ module MultipleMan
         yield records
       end
     end
-
   end
 end

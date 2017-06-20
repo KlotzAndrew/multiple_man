@@ -1,6 +1,14 @@
 require 'spec_helper'
 
 describe "Publishing of ephermal models" do
+  before do
+    expect(MultipleMan::DB).to receive(
+      :setup!
+    ).and_return(true)
+    # expect(MultipleMan::DB).to receive(:connection).and_return(:mock_conn)
+    # require 'multiple_man/outbox/message'
+  end
+
   let(:ephermal_class) do
     Class.new do
       def self.name
@@ -30,8 +38,9 @@ describe "Publishing of ephermal models" do
       data: { foo: 'foo', bar: 'bar', baz: 'baz'}
     }.to_json
 
-    expect_any_instance_of(Bunny::Exchange).to receive(:publish)
-                                           .with(payload, routing_key: 'multiple_man.Ephermal.create')
+    expect(MultipleMan::MultipleManMessage).to receive(
+      :create
+    ).with(payload, 'multiple_man.Ephermal.create')
 
     obj.multiple_man_publish(:create)
   end

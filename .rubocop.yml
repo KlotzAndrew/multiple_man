@@ -1,0 +1,12 @@
+Metrics/BlockLength:
+  Exclude:
+    - "**/*_spec.rb"
+
+Style/StringLiterals:
+  Enabled: false
+
+Style/SymbolArray:
+  Enabled: false
+
+Metrics/LineLength:
+  Max: 120

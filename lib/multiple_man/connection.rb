@@ -10,7 +10,6 @@ module MultipleMan
       Thread.current[:multiple_man_exception_retry_count] = 0
     rescue Bunny::Exception, Timeout::Error => e
       recovery_options = MultipleMan.configuration.connection_recovery
-      MultipleMan.logger.debug "Bunny Error: #{e.inspect}"
 
       retry_count = Thread.current[:multiple_man_exception_retry_count] || 0
       retry_count += 1
@@ -21,13 +20,15 @@ module MultipleMan
         retry
       else
         Thread.current[:multiple_man_exception_retry_count] = 0
-        raise "MultipleMan::ConnectionError"
+        MultipleMan.logger.debug "Bunny Error: #{e.inspect}"
+        raise ConnectionError, e
       end
     end
 
     def self.channel
       Thread.current.thread_variable_get(:multiple_man_current_channel) || begin
         channel = connection.create_channel
+        channel.confirm_select
         channel_gc.push(channel)
         Thread.current.thread_variable_set(:multiple_man_current_channel, channel)
 
@@ -72,6 +73,7 @@ module MultipleMan
     end
 
     attr_reader :topic
+    attr_accessor :channel
     delegate :queue, to: :channel
 
     def initialize(channel)
@@ -83,11 +85,9 @@ module MultipleMan
       MultipleMan.configuration.topic_name
     end
 
-  private
+    private
 
-    attr_accessor :channel
     attr_writer :topic
-
   end
 end
 

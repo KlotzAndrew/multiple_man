@@ -1,15 +1,12 @@
 require 'spec_helper'
 
-describe MultipleMan::ModelPublisher do 
-  let(:channel_stub) { double(Bunny::Channel, topic: topic_stub)}
-  let(:topic_stub) { double(Bunny::Exchange, publish: nil) }
-
-  before {
-    MultipleMan::Connection.stub(:connect).and_yield(channel_stub)
+describe MultipleMan::ModelPublisher do
+  before do
+    expect(MultipleMan::Outbox).to receive(:setup_table!).and_return(true)
     MultipleMan.configure do |config|
       config.topic_name = "app"
     end
-  }
+  end
 
   class MockObject
     def foo
@@ -30,13 +27,13 @@ describe MultipleMan::ModelPublisher do
   describe "publish" do
     it "should send the jsonified version of the model to the correct routing key" do
       MultipleMan::AttributeExtractor.any_instance.should_receive(:as_json).and_return({foo: "bar"})
-      topic_stub.should_receive(:publish).with('{"type":"MockObject","operation":"create","id":{"id":10},"data":{"foo":"bar"}}', routing_key: "app.MockObject.create")
+      MultipleMan::Outbox.should_receive(:create_message).with('{"type":"MockObject","operation":"create","id":{"id":10},"data":{"foo":"bar"}}', "app.MockObject.create")
       described_class.new(fields: [:foo]).publish(MockObject.new)
     end
 
     it "should call the error handler on error" do
       ex = Exception.new("Bad stuff happened")
-      topic_stub.stub(:publish) { raise ex }
+      MultipleMan::Outbox.stub(:create_message) { raise ex }
       MultipleMan.should_receive(:error).with(ex)
       described_class.new(fields: [:foo]).publish(MockObject.new)
     end
@@ -46,8 +43,9 @@ describe MultipleMan::ModelPublisher do
     class MySerializer
       def initialize(record)
       end
+
       def as_json
-        {a: "yes"}
+        { a: "yes" }
       end
     end
 
@@ -55,9 +53,8 @@ describe MultipleMan::ModelPublisher do
 
     it "should get its data from the serializer" do
       obj = MockObject.new
-      topic_stub.should_receive(:publish).with('{"type":"MockObject","operation":"create","id":{"id":10},"data":{"a":"yes"}}', routing_key: "app.MockObject.create")
+      MultipleMan::Outbox.should_receive(:create_message).with('{"type":"MockObject","operation":"create","id":{"id":10},"data":{"a":"yes"}}', "app.MockObject.create")
       subject.publish(obj)
     end
   end
-
 end

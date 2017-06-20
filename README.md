@@ -29,6 +29,10 @@ Or install it yourself as:
 
 ## Usage
 
+TODO: write an explaination for this
+export DATABASE_URL=postgres://root@localhost/rabbit-post_development
+bundle exec rake multiple_man:producer
+
 ### Configuration
 
 MultipleMan can be configured (ideally inside an initializer) by
