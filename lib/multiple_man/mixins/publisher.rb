@@ -4,14 +4,20 @@ module MultipleMan
   module Publisher
     def Publisher.included(base)
       base.extend(ClassMethods)
-      if base.respond_to?(:after_commit)
-        base.after_commit(on: :create) { |r| r.multiple_man_publish(:create) }
-        base.after_commit(on: :update) do |r|
+      if base.respond_to?(:after_save)
+        base.after_save do |r|
           if !r.respond_to?(:previous_changes) || r.previous_changes.any?
             r.multiple_man_publish(:update)
           end
         end
-        base.after_commit(on: :destroy) { |r| r.multiple_man_publish(:destroy) }
+      end
+
+      if base.respond_to?(:before_destroy)
+        base.before_destroy { |r| r.multiple_man_publish(:destroy) }
+      end
+
+      if base.respond_to?(:after_create)
+        base.after_create { |r| r.multiple_man_publish(:create) }
       end
 
       base.class_attribute :multiple_man_publisher

@@ -5,6 +5,7 @@ module MultipleMan
 
     def initialize(options = {})
       self.options = options.with_indifferent_access
+      @message_publisher = Outbox::MessageAdapter.adapter
     end
 
     def publish(records, operation=:create)
@@ -14,7 +15,7 @@ module MultipleMan
         ActiveSupport::Notifications.instrument('multiple_man.publish_messages') do
           all_records(records) do |record|
             ActiveSupport::Notifications.instrument('multiple_man.publish_message') do
-              push_record(connection, record, operation)
+              @message_publisher.push_record(connection, record, operation, options)
             end
           end
         end
@@ -24,18 +25,9 @@ module MultipleMan
       MultipleMan.error(err, reraise: false)
     end
 
-  private
+    private
 
     attr_accessor :options
-
-    def push_record(connection, record, operation)
-      data = PayloadGenerator.new(record, operation, options)
-      routing_key = RoutingKey.new(data.type, operation).to_s
-
-      MultipleMan.logger.debug("  Record Data: #{data} | Routing Key: #{routing_key}")
-
-      connection.topic.publish(data.payload, routing_key: routing_key)
-    end
 
     def all_records(records, &block)
       if records.respond_to?(:find_each)

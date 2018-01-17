@@ -17,7 +17,7 @@ describe MultipleMan::Runner do
   context "shutdown" do
     let(:connection) { MultipleMan::Connection.connection }
 
-    it 'closes connections and exits gracefully' do
+    xit 'closes connections and exits gracefully' do
       MultipleMan::Consumers::General.stub(:new) { Process.kill('INT', 0) }
 
       expect(connection).to receive(:close)
